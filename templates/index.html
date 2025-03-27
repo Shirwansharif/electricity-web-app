@@ -1,89 +1,99 @@
-from flask import Flask, render_template, request, send_file, jsonify
-import os
-import io
-import csv
-import matplotlib.pyplot as plt
-import datetime
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Electricity Bill Calculator</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; }
+    h1 { color: #444; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #eee; }
+    input { padding: 5px; margin: 5px; }
+    button { padding: 8px 15px; margin-top: 10px; }
+    #results { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>⚡ Electricity Bill Calculator</h1>
 
-app = Flask(__name__)
+  <form id="device-form">
+    <input type="text" name="device" placeholder="Device Name" required>
+    <input type="number" name="watt" placeholder="Watt" required>
+    <input type="number" name="hours" placeholder="Hours/Day" required>
+    <input type="number" name="quantity" placeholder="Quantity" required>
+    <input type="number" name="days" placeholder="Days" required>
+    <button type="button" onclick="addDevice()">➕ Add Device</button>
+  </form>
 
-# Sample price slabs (same as in your desktop app)
-price_slabs = [
-    {"from": 1, "to": 450, "price": 18},
-    {"from": 451, "to": 900, "price": 24},
-    {"from": 901, "to": 1500, "price": 42},
-    {"from": 1501, "to": 2100, "price": 72},
-    {"from": 2101, "to": 3000, "price": 90},
-    {"from": 3001, "to": 5000, "price": 180},
-]
+  <table id="device-table">
+    <thead>
+      <tr>
+        <th>Device</th><th>Watt</th><th>Hours</th><th>Quantity</th><th>Days</th><th>kWh</th><th>Remove</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-def calculate_kwh(watt, hours, quantity, days):
-    return (watt * hours * quantity * days) / 1000
+  <button onclick="calculateBill()">📊 Calculate</button>
 
-def calculate_cost(total_kwh):
-    total_cost = 0
-    remaining = total_kwh
-    sorted_slabs = sorted(price_slabs, key=lambda x: x['from'])
+  <div id="results"></div>
 
-    for slab in sorted_slabs:
-        if remaining <= 0:
-            break
-        slab_range = slab['to'] - slab['from'] + 1
-        used = min(remaining, slab_range)
-        total_cost += used * slab['price']
-        remaining -= used
+  <script>
+    let devices = [];
 
-    if remaining > 0:
-        total_cost += remaining * sorted_slabs[-1]['price']
+    function addDevice() {
+      const form = document.getElementById('device-form');
+      const data = new FormData(form);
+      const device = {
+        device: data.get('device'),
+        watt: parseFloat(data.get('watt')),
+        hours: parseFloat(data.get('hours')),
+        quantity: parseInt(data.get('quantity')),
+        days: parseInt(data.get('days'))
+      };
+      device.kwh = (device.watt * device.hours * device.quantity * device.days) / 1000;
+      devices.push(device);
+      renderTable();
+      form.reset();
+    }
 
-    return total_cost
+    function renderTable() {
+      const tbody = document.querySelector('#device-table tbody');
+      tbody.innerHTML = '';
+      devices.forEach((d, i) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${d.device}</td>
+            <td>${d.watt}</td>
+            <td>${d.hours}</td>
+            <td>${d.quantity}</td>
+            <td>${d.days}</td>
+            <td>${d.kwh.toFixed(2)}</td>
+            <td><button onclick="removeDevice(${i})">🗑</button></td>
+          </tr>`;
+      });
+    }
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    function removeDevice(index) {
+      devices.splice(index, 1);
+      renderTable();
+    }
 
-@app.route('/calculate', methods=['POST'])
-def calculate():
-    data = request.get_json()
-    devices = data.get('devices', [])
-    total_kwh = 0
-    device_data = []
-
-    for dev in devices:
-        try:
-            name = dev['device']
-            watt = float(dev['watt'])
-            hours = float(dev['hours'])
-            qty = int(dev['quantity'])
-            days = int(dev['days'])
-            kwh = calculate_kwh(watt, hours, qty, days)
-            total_kwh += kwh
-            device_data.append({"name": name, "kwh": kwh})
-        except:
-            continue
-
-    total_cost = calculate_cost(total_kwh)
-    return jsonify({
-        "total_kwh": round(total_kwh, 2),
-        "total_cost": round(total_cost, 2),
-        "devices": device_data
-    })
-
-@app.route('/chart.png')
-def chart():
-    # Example data (should be dynamic)
-    devices = [('TV', 120.5), ('Fridge', 220.1), ('AC', 350.7)]
-    labels = [d[0] for d in devices]
-    sizes = [d[1] for d in devices]
-
-    fig, ax = plt.subplots()
-    ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-    ax.axis('equal')
-
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    return send_file(img, mimetype='image/png')
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    function calculateBill() {
+      fetch('/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devices })
+      })
+      .then(res => res.json())
+      .then(data => {
+        let html = `<h2>📋 Result</h2>`;
+        html += `<p>Total kWh: <strong>${data.total_kwh}</strong></p>`;
+        html += `<p>Total Cost (IQD): <strong>${data.total_cost}</strong></p>`;
+        document.getElementById('results').innerHTML = html;
+      });
+    }
+  </script>
+</body>
+</html>
