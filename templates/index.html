@@ -1,99 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ku" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>Electricity Bill Calculator</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; }
-    h1 { color: #444; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background: #eee; }
-    input { padding: 5px; margin: 5px; }
-    button { padding: 8px 15px; margin-top: 10px; }
-    #results { margin-top: 20px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیستەمی ناسینەوەی دەموچاو - Face Recognition System</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-  <h1>⚡ Electricity Bill Calculator</h1>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-person-bounding-box"></i>
+                سیستەمی ناسینەوەی دەموچاو
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="nav-link text-white">
+                            <i class="bi bi-people-fill"></i>
+                            کەسی ناسراو: <span id="totalFaces" class="badge bg-light text-primary">{{ total_faces }}</span>
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-  <form id="device-form">
-    <input type="text" name="device" placeholder="Device Name" required>
-    <input type="number" name="watt" placeholder="Watt" required>
-    <input type="number" name="hours" placeholder="Hours/Day" required>
-    <input type="number" name="quantity" placeholder="Quantity" required>
-    <input type="number" name="days" placeholder="Days" required>
-    <button type="button" onclick="addDevice()">➕ Add Device</button>
-  </form>
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <div class="row g-4">
+            <!-- Left Panel - Training -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-cloud-upload"></i>
+                            زیادکردنی دەموچاوی نوێ
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm">
+                            <div class="mb-3">
+                                <label class="form-label">ناوی کەس:</label>
+                                <input type="text" class="form-control" id="personName" placeholder="ناوی کەس بنووسە..." required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">وێنە هەڵبژێرە:</label>
+                                <input type="file" class="form-control" id="uploadImage" accept="image/*" required>
+                            </div>
+                            <div id="uploadPreview" class="mb-3 text-center" style="display: none;">
+                                <img id="previewImg" class="img-fluid rounded border" style="max-height: 200px;">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-check-circle"></i>
+                                زیادکردن و فێربوون
+                            </button>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <h6 class="text-muted mb-3">دەموچاوە ناسراوەکان:</h6>
+                        <div id="knownFacesList" class="list-group">
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-inbox"></i>
+                                هێشتا هیچ دەموچاوێک زیاد نەکراوە
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-  <table id="device-table">
-    <thead>
-      <tr>
-        <th>Device</th><th>Watt</th><th>Hours</th><th>Quantity</th><th>Days</th><th>kWh</th><th>Remove</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+            <!-- Middle Panel - Webcam -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-camera-video"></i>
+                            ناسینەوە لە وێبکام
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <button id="startWebcam" class="btn btn-info btn-lg">
+                                <i class="bi bi-play-circle"></i>
+                                دەستپێکردن
+                            </button>
+                            <button id="stopWebcam" class="btn btn-danger btn-lg" style="display: none;">
+                                <i class="bi bi-stop-circle"></i>
+                                ڕاگرتن
+                            </button>
+                        </div>
+                        
+                        <div id="webcamContainer" class="position-relative" style="display: none;">
+                            <video id="webcam" autoplay playsinline class="img-fluid rounded border"></video>
+                            <canvas id="webcamCanvas" class="position-absolute top-0 start-0 w-100 h-100"></canvas>
+                        </div>
+                        
+                        <div id="webcamStatus" class="alert alert-info mt-3" style="display: none;"></div>
+                        
+                        <div id="webcamResults" class="mt-3" style="display: none;">
+                            <h6 class="text-muted mb-2">ئەنجامەکان:</h6>
+                            <div id="webcamFaces"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-  <button onclick="calculateBill()">📊 Calculate</button>
+            <!-- Right Panel - Image Recognition -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="bi bi-image"></i>
+                            ناسینەوە لە وێنە
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="recognizeForm">
+                            <div class="mb-3">
+                                <label class="form-label">وێنە هەڵبژێرە بۆ ناسینەوە:</label>
+                                <input type="file" class="form-control" id="recognizeImage" accept="image/*" required>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100 text-dark">
+                                <i class="bi bi-search"></i>
+                                ناسینەوە
+                            </button>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div id="recognitionResult" style="display: none;">
+                            <h6 class="text-muted mb-3">ئەنجام:</h6>
+                            <div id="resultImage" class="mb-3 text-center"></div>
+                            <div id="resultDetails"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <div id="results"></div>
+    <!-- Toast Notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="notificationToast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="bi bi-bell-fill me-2"></i>
+                <strong class="me-auto">ئاگاداری</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastMessage"></div>
+        </div>
+    </div>
 
-  <script>
-    let devices = [];
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-white">چاوەڕوان بە...</p>
+    </div>
 
-    function addDevice() {
-      const form = document.getElementById('device-form');
-      const data = new FormData(form);
-      const device = {
-        device: data.get('device'),
-        watt: parseFloat(data.get('watt')),
-        hours: parseFloat(data.get('hours')),
-        quantity: parseInt(data.get('quantity')),
-        days: parseInt(data.get('days'))
-      };
-      device.kwh = (device.watt * device.hours * device.quantity * device.days) / 1000;
-      devices.push(device);
-      renderTable();
-      form.reset();
-    }
-
-    function renderTable() {
-      const tbody = document.querySelector('#device-table tbody');
-      tbody.innerHTML = '';
-      devices.forEach((d, i) => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${d.device}</td>
-            <td>${d.watt}</td>
-            <td>${d.hours}</td>
-            <td>${d.quantity}</td>
-            <td>${d.days}</td>
-            <td>${d.kwh.toFixed(2)}</td>
-            <td><button onclick="removeDevice(${i})">🗑</button></td>
-          </tr>`;
-      });
-    }
-
-    function removeDevice(index) {
-      devices.splice(index, 1);
-      renderTable();
-    }
-
-    function calculateBill() {
-      fetch('/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ devices })
-      })
-      .then(res => res.json())
-      .then(data => {
-        let html = `<h2>📋 Result</h2>`;
-        html += `<p>Total kWh: <strong>${data.total_kwh}</strong></p>`;
-        html += `<p>Total Cost (IQD): <strong>${data.total_cost}</strong></p>`;
-        document.getElementById('results').innerHTML = html;
-      });
-    }
-  </script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
