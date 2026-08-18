@@ -32,10 +32,11 @@ known_faces_db = {}
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render home page"""
-    return templates.TemplateResponse("index.html", {
+    context = {
         "request": request,
         "total_faces": len(known_faces_db)
-    })
+    }
+    return templates.TemplateResponse("index.html", context)
 
 @app.post("/api/upload")
 async def upload_face(name: str = Form(...), file: UploadFile = File(...)):

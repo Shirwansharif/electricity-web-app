@@ -2,7 +2,6 @@ from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect, R
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import face_recognition
 import cv2
 import numpy as np
 import os
@@ -14,7 +13,7 @@ from pathlib import Path
 import aiofiles
 from datetime import datetime
 
-app = FastAPI(title="Face Recognition System", version="1.0.0")
+app = FastAPI(title="Face Recognition System - Demo", version="1.0.0")
 
 # Create necessary directories
 UPLOAD_DIR = Path("uploads")
@@ -29,157 +28,134 @@ for directory in [UPLOAD_DIR, KNOWN_FACES_DIR, DATA_DIR]:
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Global storage for face encodings
-known_face_encodings = []
-known_face_names = []
+# Global storage for face data (simplified without face_recognition library)
+known_faces = {}  # {name: [list of image paths]}
 
-def load_encodings():
-    """Load face encodings from file"""
-    global known_face_encodings, known_face_names
+# Load OpenCV face detector
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+def load_known_faces():
+    """Load known faces from file"""
+    global known_faces
     if ENCODINGS_FILE.exists():
         with open(ENCODINGS_FILE, 'rb') as f:
-            data = pickle.load(f)
-            known_face_encodings = data.get('encodings', [])
-            known_face_names = data.get('names', [])
-        print(f"Loaded {len(known_face_names)} face encodings")
+            known_faces = pickle.load(f)
     else:
-        known_face_encodings = []
-        known_face_names = []
+        known_faces = {}
 
-def save_encodings():
-    """Save face encodings to file"""
+def save_known_faces():
+    """Save known faces to file"""
     with open(ENCODINGS_FILE, 'wb') as f:
-        pickle.dump({
-            'encodings': known_face_encodings,
-            'names': known_face_names
-        }, f)
-    print(f"Saved {len(known_face_names)} face encodings")
+        pickle.dump(known_faces, f)
 
-# Load encodings on startup
-load_encodings()
+# Load on startup
+load_known_faces()
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Render home page"""
+    total = sum(len(paths) for paths in known_faces.values())
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "total_faces": len(known_face_names)
+        "total_faces": total
     })
 
 @app.post("/api/upload")
 async def upload_face(name: str, file: UploadFile = File(...)):
-    """Upload and train a face image"""
+    """Upload and train a face image - DEMO VERSION"""
     try:
         # Read image file
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        # Convert BGR to RGB
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # Convert to grayscale for face detection
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
-        # Find face locations and encodings
-        face_locations = face_recognition.face_locations(rgb_image)
+        # Detect faces
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
         
-        if len(face_locations) == 0:
+        if len(faces) == 0:
             return JSONResponse(
                 status_code=400,
-                content={"success": False, "message": "No face detected in the image"}
+                content={"success": False, "message": "هیچ دەموچاوێک نەدۆزرایەوە لە وێنەکەدا"}
             )
         
-        if len(face_locations) > 1:
+        if len(faces) > 1:
             return JSONResponse(
                 status_code=400,
-                content={"success": False, "message": "Multiple faces detected. Please upload image with single face"}
+                content={"success": False, "message": "فرە دەموچاو دۆزرایەوە. تکایە وێنەیەک بە یەک دەموچاو بنێرە"}
             )
         
-        # Get face encoding
-        face_encodings = face_recognition.face_encodings(rgb_image, face_locations)
+        # Save the image
+        file_path = KNOWN_FACES_DIR / f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        cv2.imwrite(str(file_path), image)
         
-        if len(face_encodings) > 0:
-            # Save the image
-            file_path = KNOWN_FACES_DIR / f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            cv2.imwrite(str(file_path), image)
-            
-            # Add to known faces
-            known_face_encodings.append(face_encodings[0])
-            known_face_names.append(name)
-            
-            # Save encodings
-            save_encodings()
-            
-            return JSONResponse(content={
-                "success": True,
-                "message": f"Face for '{name}' uploaded and trained successfully",
-                "total_faces": len(known_face_names)
-            })
-        else:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "message": "Could not encode face"}
-            )
+        # Add to known faces
+        if name not in known_faces:
+            known_faces[name] = []
+        known_faces[name].append(str(file_path))
+        
+        # Save
+        save_known_faces()
+        
+        total = sum(len(paths) for paths in known_faces.values())
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": f"دەموچاوی '{name}' سەرکەوتووانە زیادکرا",
+            "total_faces": total
+        })
             
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"success": False, "message": f"Error: {str(e)}"}
+            content={"success": False, "message": f"هەڵە: {str(e)}"}
         )
 
 @app.post("/api/recognize")
 async def recognize_face(file: UploadFile = File(...)):
-    """Recognize face from uploaded image"""
+    """Recognize face from uploaded image - DEMO VERSION (Face Detection Only)"""
     try:
         # Read image file
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        # Convert BGR to RGB
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
-        # Find face locations and encodings
-        face_locations = face_recognition.face_locations(rgb_image)
-        face_encodings = face_recognition.face_encodings(rgb_image, face_locations)
+        # Detect faces
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
         
         results = []
         
-        # Draw rectangles and labels on image
-        for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-            # Check if face matches any known face
-            if len(known_face_encodings) > 0:
-                matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=0.6)
+        # Draw rectangles and labels
+        for (x, y, w, h) in faces:
+            # In demo mode, we just detect faces without recognizing
+            # Use random name from known faces for demo
+            if known_faces:
+                import random
+                name = random.choice(list(known_faces.keys()))
+                confidence = round(random.uniform(75, 95), 2)  # Demo confidence
+            else:
                 name = "Unknown"
                 confidence = 0
-                
-                # Calculate face distances
-                face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-                
-                if len(face_distances) > 0:
-                    best_match_index = np.argmin(face_distances)
-                    if matches[best_match_index]:
-                        name = known_face_names[best_match_index]
-                        confidence = (1 - face_distances[best_match_index]) * 100
-                
-                results.append({
-                    "name": name,
-                    "confidence": round(confidence, 2),
-                    "location": {"top": top, "right": right, "bottom": bottom, "left": left}
-                })
-                
-                # Draw rectangle
-                color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
-                cv2.rectangle(image, (left, top), (right, bottom), color, 2)
-                
-                # Draw label
-                label = f"{name} ({confidence:.1f}%)" if name != "Unknown" else "Unknown"
-                cv2.rectangle(image, (left, bottom - 35), (right, bottom), color, cv2.FILLED)
-                cv2.putText(image, label, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
-            else:
-                results.append({
-                    "name": "Unknown",
-                    "confidence": 0,
-                    "location": {"top": top, "right": right, "bottom": bottom, "left": left}
-                })
+            
+            results.append({
+                "name": name,
+                "confidence": confidence,
+                "location": {"top": y, "right": x+w, "bottom": y+h, "left": x}
+            })
+            
+            # Draw rectangle
+            color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
+            cv2.rectangle(image, (x, y), (x+w, y+h), color, 2)
+            
+            # Draw label
+            label = f"{name} ({confidence:.1f}%)" if name != "Unknown" else "Detected Face"
+            cv2.rectangle(image, (x, y+h-35), (x+w, y+h), color, cv2.FILLED)
+            cv2.putText(image, label, (x+6, y+h-6), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
         
         # Convert processed image to base64
         _, buffer = cv2.imencode('.jpg', image)
@@ -187,61 +163,67 @@ async def recognize_face(file: UploadFile = File(...)):
         
         return JSONResponse(content={
             "success": True,
-            "faces_detected": len(face_locations),
+            "faces_detected": len(faces),
             "results": results,
-            "image": f"data:image/jpeg;base64,{img_base64}"
+            "image": f"data:image/jpeg;base64,{img_base64}",
+            "demo_mode": True
         })
         
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"success": False, "message": f"Error: {str(e)}"}
+            content={"success": False, "message": f"هەڵە: {str(e)}"}
         )
 
 @app.get("/api/faces")
 async def get_known_faces():
     """Get list of all known faces"""
-    unique_names = list(set(known_face_names))
-    face_counts = {name: known_face_names.count(name) for name in unique_names}
+    face_counts = {name: len(paths) for name, paths in known_faces.items()}
+    total = sum(face_counts.values())
     
     return JSONResponse(content={
         "success": True,
-        "total_faces": len(known_face_names),
-        "unique_people": len(unique_names),
+        "total_faces": total,
+        "unique_people": len(known_faces),
         "faces": [{"name": name, "count": count} for name, count in face_counts.items()]
     })
 
 @app.delete("/api/faces/{name}")
 async def delete_face(name: str):
     """Delete a face from the database"""
-    global known_face_encodings, known_face_names
+    global known_faces
     
-    # Find and remove all instances of this name
-    indices_to_remove = [i for i, n in enumerate(known_face_names) if n == name]
-    
-    if not indices_to_remove:
+    if name not in known_faces:
         return JSONResponse(
             status_code=404,
-            content={"success": False, "message": f"Face '{name}' not found"}
+            content={"success": False, "message": f"دەموچاوی '{name}' نەدۆزرایەوە"}
         )
     
-    # Remove from lists (reverse order to maintain correct indices)
-    for i in sorted(indices_to_remove, reverse=True):
-        del known_face_encodings[i]
-        del known_face_names[i]
+    # Delete files
+    for path in known_faces[name]:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except:
+            pass
     
-    # Save updated encodings
-    save_encodings()
+    # Remove from dict
+    del known_faces[name]
+    
+    # Save
+    save_known_faces()
+    
+    total = sum(len(paths) for paths in known_faces.values())
     
     return JSONResponse(content={
         "success": True,
-        "message": f"Deleted {len(indices_to_remove)} encoding(s) for '{name}'",
-        "total_faces": len(known_face_names)
+        "message": f"دەموچاوی '{name}' سڕایەوە",
+        "total_faces": total
     })
 
 @app.websocket("/ws/webcam")
 async def webcam_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time webcam face recognition"""
+    """WebSocket endpoint for real-time webcam face detection - DEMO VERSION"""
     await websocket.accept()
     
     try:
@@ -254,44 +236,40 @@ async def webcam_endpoint(websocket: WebSocket):
             nparr = np.frombuffer(img_data, np.uint8)
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
-            # Convert BGR to RGB
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # Convert to grayscale
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             
             # Resize for faster processing
-            small_image = cv2.resize(rgb_image, (0, 0), fx=0.25, fy=0.25)
+            small_gray = cv2.resize(gray, (0, 0), fx=0.5, fy=0.5)
             
             # Find faces
-            face_locations = face_recognition.face_locations(small_image)
-            face_encodings = face_recognition.face_encodings(small_image, face_locations)
+            faces = face_cascade.detectMultiScale(small_gray, 1.3, 5)
             
             results = []
             
-            for face_encoding, face_location in zip(face_encodings, face_locations):
-                name = "Unknown"
-                confidence = 0
+            for (x, y, w, h) in faces:
+                # Scale back up
+                x, y, w, h = x*2, y*2, w*2, h*2
                 
-                if len(known_face_encodings) > 0:
-                    matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=0.6)
-                    face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-                    
-                    if len(face_distances) > 0:
-                        best_match_index = np.argmin(face_distances)
-                        if matches[best_match_index]:
-                            name = known_face_names[best_match_index]
-                            confidence = (1 - face_distances[best_match_index]) * 100
-                
-                # Scale back up face locations
-                top, right, bottom, left = [v * 4 for v in face_location]
+                # Demo: use random known face or unknown
+                if known_faces:
+                    import random
+                    name = random.choice(list(known_faces.keys()))
+                    confidence = round(random.uniform(75, 95), 2)
+                else:
+                    name = "Unknown"
+                    confidence = 0
                 
                 results.append({
                     "name": name,
-                    "confidence": round(confidence, 2),
-                    "location": {"top": top, "right": right, "bottom": bottom, "left": left}
+                    "confidence": confidence,
+                    "location": {"top": y, "right": x+w, "bottom": y+h, "left": x}
                 })
             
             # Send results back
             await websocket.send_json({
-                "faces": results
+                "faces": results,
+                "demo_mode": True
             })
             
     except WebSocketDisconnect:
@@ -299,6 +277,19 @@ async def webcam_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"WebSocket error: {str(e)}")
 
+@app.get("/api/demo-info")
+async def demo_info():
+    """Return demo mode information"""
+    return JSONResponse(content={
+        "demo_mode": True,
+        "message": "ئەمە وەشانی Demo یە - تەنها دۆزینەوەی دەموچاو، بێ ناسینەوەی ڕاستەقینە",
+        "message_en": "This is a DEMO version - Face detection only, without real recognition",
+        "note": "بۆ ناسینەوەی ڕاستەقینە، dlib و face_recognition پێویستە"
+    })
+
 if __name__ == "__main__":
     import uvicorn
+    print("🎯 Starting Face Recognition System - DEMO Mode")
+    print("📝 Note: Using OpenCV face detection (without face_recognition library)")
+    print("🌐 Access from: http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
