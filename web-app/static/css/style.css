@@ -1,0 +1,263 @@
+/* Face Recognition System - Custom Styles */
+
+/* Global Styles */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    padding: 1rem 1.5rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Stat Cards */
+.stat-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.stat-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+    color: #333;
+}
+
+.stat-label {
+    color: #6c757d;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Feature Cards */
+.feature-card {
+    background: white;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Form Controls */
+.form-control {
+    border-radius: 10px;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Preview Images */
+.preview-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 10px;
+    margin-top: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Video Container */
+.video-container {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+#webcam {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #000;
+}
+
+/* People List */
+.people-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.person-item {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.person-item:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    transform: translateX(-5px);
+}
+
+.person-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.btn-delete {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* Results */
+.alert {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.result-image {
+    max-width: 100%;
+    border-radius: 10px;
+    margin-top: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Recognition Results */
+.face-result {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
+    border-left: 4px solid #2196f3;
+}
+
+.face-result.unknown {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    border-left-color: #f44336;
+}
+
+.face-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #1565c0;
+}
+
+.face-result.unknown .face-name {
+    color: #c62828;
+}
+
+.face-confidence {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Loading Spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+    }
+
+    .card-header {
+        font-size: 1rem;
+    }
+
+    h1.display-4 {
+        font-size: 2rem;
+    }
+
+    .h4 {
+        font-size: 1.2rem;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Scrollbar Styling */
+.people-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.people-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.people-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.people-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* RTL Support */
+[dir="rtl"] .person-item:hover {
+    transform: translateX(5px);
+}
+
+[dir="rtl"] .face-result {
+    border-left: none;
+    border-right: 4px solid #2196f3;
+}
+
+[dir="rtl"] .face-result.unknown {
+    border-right-color: #f44336;
+}
